@@ -115,7 +115,7 @@ public final class AlertBar {
 
         let statusBarHeight: CGFloat = max(UIApplication.shared.statusBarFrame.height, safeArea.top)
         let alertBarHeight: CGFloat = max(statusBarHeight, alertBarView.frame.height)
-        alertBarView.show(duration: 2, translationY: -alertBarHeight) {
+        alertBarView.show(duration: duration, translationY: -alertBarHeight) {
             if let index = self.alertBarViews.firstIndex(of: alertBarView) {
                 self.alertBarViews.remove(at: index)
             }
