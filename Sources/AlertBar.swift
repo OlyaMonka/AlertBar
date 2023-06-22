@@ -38,60 +38,65 @@ public final class AlertBar {
     private static let kWindowLevel: UIWindow.Level = UIWindow.Level(UIWindow.Level.statusBar.rawValue + 1)
     private var alertBarViews: [AlertBarView] = []
     private var options = Options(shouldConsiderSafeArea: true, isStretchable: false, textAlignment: .left)
-
+    
     public struct Options {
         let shouldConsiderSafeArea: Bool
         let isStretchable: Bool
         let textAlignment: NSTextAlignment
         let font: UIFont
-
+        
         public init(
             shouldConsiderSafeArea: Bool = true,
             isStretchable: Bool = false,
             textAlignment: NSTextAlignment = .left,
             font: UIFont = UIFont.systemFont(ofSize: 12.0)) {
-
-            self.shouldConsiderSafeArea = shouldConsiderSafeArea
-            self.isStretchable = isStretchable
-            self.textAlignment = textAlignment
-            self.font = font
-        }
+                
+                self.shouldConsiderSafeArea = shouldConsiderSafeArea
+                self.isStretchable = isStretchable
+                self.textAlignment = textAlignment
+                self.font = font
+            }
     }
-
+    
     public func setDefault(options: Options) {
         self.options = options
     }
-
+    
     public func show(type: AlertBarType, message: String, duration: TimeInterval = 2, options: Options? = nil, completion: (() -> Void)? = nil) {
         // Hide all before new one is shown.
         alertBarViews.forEach({ $0.hide() })
-
+        
         let currentOptions = options ?? self.options
-
+        
         let width = UIScreen.main.bounds.width
         let height = UIScreen.main.bounds.height
-
+        
         let baseView = UIView(frame: UIScreen.main.bounds)
         let window: UIWindow
         let orientation = UIApplication.shared.statusBarOrientation
+        let userInterfaceIdiom = UIDevice.current.userInterfaceIdiom
         if orientation.isLandscape {
             window = UIWindow(frame: CGRect(x: 0, y: 0, width: height, height: width))
+            if #unavailable(iOS 16.0) {
                 let sign: CGFloat = orientation == .landscapeLeft ? -1 : 1
                 let d = abs(width - height) / 2
                 baseView.transform = CGAffineTransform(rotationAngle: sign * CGFloat.pi / 2).translatedBy(x: sign * d, y: sign * d)
+            }
         } else {
             window = UIWindow(frame: CGRect(x: 0, y: 0, width: width, height: height))
-            if orientation == .portraitUpsideDown {
-                baseView.transform = CGAffineTransform(rotationAngle: .pi)
+            if #unavailable(iOS 16.0) {
+                if userInterfaceIdiom == .phone && orientation == .portraitUpsideDown {
+                    baseView.transform = CGAffineTransform(rotationAngle: .pi)
+                }
             }
         }
         window.isUserInteractionEnabled = false
-
+        
         window.windowLevel = AlertBar.kWindowLevel
         window.makeKeyAndVisible()
         baseView.isUserInteractionEnabled = false
         window.addSubview(baseView)
-
+        
         let safeArea: UIEdgeInsets
         if #available(iOS 11.0, *) {
             safeArea = window.safeAreaInsets
@@ -109,7 +114,7 @@ public final class AlertBar {
         alertBarView.fit(safeArea: currentOptions.shouldConsiderSafeArea ? safeArea : .zero)
         alertBarViews.append(alertBarView)
         baseView.addSubview(alertBarView)
-
+        
         let statusBarHeight: CGFloat = max(UIApplication.shared.statusBarFrame.height, safeArea.top)
         let alertBarHeight: CGFloat = max(statusBarHeight, alertBarView.frame.height)
         alertBarView.show(duration: duration, translationY: -alertBarHeight) {
@@ -121,7 +126,7 @@ public final class AlertBar {
             completion?()
         }
     }
-
+    
     public func show(error: Error, duration: TimeInterval = 2, options: Options? = nil, completion: (() -> Void)? = nil) {
         let code = (error as NSError).code
         let localizedDescription = error.localizedDescription
@@ -134,7 +139,7 @@ extension AlertBar: AlertBarViewDelegate {
         alertBarView.removeFromSuperview()
         alertBarViews.forEach({ $0.hide() })
         alertBarViews = []
-   }
+    }
 }
 
 // MARK: - Static helpers
@@ -143,11 +148,11 @@ public extension AlertBar {
     static func setDefault(options: Options) {
         shared.options = options
     }
-
+    
     static func show(type: AlertBarType, message: String, duration: TimeInterval = 2, options: Options? = nil, completion: (() -> Void)? = nil) {
         shared.show(type: type, message: message, duration: duration, options: options, completion: completion)
     }
-
+    
     static func show(error: Error, duration: TimeInterval = 2, options: Options? = nil, completion: (() -> Void)? = nil) {
         shared.show(error: error, duration: duration, options: options, completion: completion)
     }
@@ -160,34 +165,34 @@ protocol AlertBarViewDelegate: class {
 internal class AlertBarView: UIView {
     internal let messageLabel = UILabel()
     internal weak var delegate: AlertBarViewDelegate?
-
+    
     private enum State {
         case showing
         case shown
         case hiding
         case hidden
     }
-
+    
     private static let kMargin: CGFloat = 2
     private static let kAnimationDuration: TimeInterval = 0.2
-
+    
     private var translationY: CGFloat = 0
     private var completion: (() -> Void)?
     private var state: State = .hidden
-
+    
     required public init?(coder aDecoder: NSCoder) {
         fatalError("NSCoding not supported")
     }
-
+    
     override init(frame: CGRect) {
         super.init(frame: frame)
         let margin = AlertBarView.kMargin
         messageLabel.frame = CGRect(x: margin, y: margin, width: frame.width - margin*2, height: frame.height - margin*2)
         addSubview(messageLabel)
-
+        
         NotificationCenter.default.addObserver(self, selector: #selector(self.handleRotate(_:)), name: UIDevice.orientationDidChangeNotification, object: nil)
     }
-
+    
     func fit(safeArea: UIEdgeInsets) {
         let margin = AlertBarView.kMargin
         messageLabel.sizeToFit()
@@ -196,29 +201,29 @@ internal class AlertBarView: UIView {
         messageLabel.frame.size.width = frame.size.width - margin*2 - safeArea.left - safeArea.right
         frame.size.height = messageLabel.frame.origin.y + messageLabel.frame.height + margin*2
     }
-
+    
     deinit {
         NotificationCenter.default.removeObserver(self, name: UIDevice.orientationDidChangeNotification, object: nil)
     }
-
+    
     func show(duration: TimeInterval, translationY: CGFloat, completion: (() -> Void)?) {
         self.state = .showing
         self.translationY = translationY
         self.completion = completion
-
+        
         transform = CGAffineTransform(translationX: 0, y: translationY)
         UIView.animate(
             withDuration: AlertBarView.kAnimationDuration,
             animations: { () -> Void in
                 self.transform = .identity
-        }, completion: { _ in
-            self.state = .shown
-            DispatchQueue.main.asyncAfter(deadline: .now() + .seconds(Int(duration))) {
-                self.hide()
-            }
-        })
+            }, completion: { _ in
+                self.state = .shown
+                DispatchQueue.main.asyncAfter(deadline: .now() + .seconds(Int(duration))) {
+                    self.hide()
+                }
+            })
     }
-
+    
     func hide() {
         guard state == .showing || state == .shown else {
             return
@@ -229,15 +234,15 @@ internal class AlertBarView: UIView {
             withDuration: AlertBarView.kAnimationDuration,
             animations: { () -> Void in
                 self.transform = CGAffineTransform(translationX: 0, y: self.translationY)
-        },
+            },
             completion: { (animated: Bool) -> Void in
                 self.removeFromSuperview()
                 self.state = .hidden
                 self.completion?()
                 self.completion = nil
-        })
+            })
     }
-
+    
     @objc private func handleRotate(_ notification: Notification) {
         delegate?.alertBarViewHandleRotate(self)
     }
