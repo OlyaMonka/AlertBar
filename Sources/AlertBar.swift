@@ -74,17 +74,14 @@ public final class AlertBar {
         let baseView = UIView(frame: UIScreen.main.bounds)
         let window: UIWindow
         let orientation = UIApplication.shared.statusBarOrientation
-        let userInterfaceIdiom = UIDevice.current.userInterfaceIdiom
         if orientation.isLandscape {
             window = UIWindow(frame: CGRect(x: 0, y: 0, width: height, height: width))
-            if userInterfaceIdiom == .phone {
                 let sign: CGFloat = orientation == .landscapeLeft ? -1 : 1
                 let d = abs(width - height) / 2
                 baseView.transform = CGAffineTransform(rotationAngle: sign * CGFloat.pi / 2).translatedBy(x: sign * d, y: sign * d)
-            }
         } else {
             window = UIWindow(frame: CGRect(x: 0, y: 0, width: width, height: height))
-            if userInterfaceIdiom == .phone && orientation == .portraitUpsideDown {
+            if orientation == .portraitUpsideDown {
                 baseView.transform = CGAffineTransform(rotationAngle: .pi)
             }
         }
